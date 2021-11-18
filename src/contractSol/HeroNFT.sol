@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -38,7 +38,7 @@ interface AggregatorV3Interface {
     );
 }
     
-contract HeroNFT is Ownable, ERC721 {
+contract HeroNFT is Ownable, ERC721Enumerable {
     using Strings for uint256;
     
     uint256 public tokenId = 0;
@@ -112,7 +112,7 @@ contract HeroNFT is Ownable, ERC721 {
     }
     
     function getRandomIndex(uint256 _maxIndex) internal view returns(uint256) {
-        uint256 rand = random(string(abi.encodePacked(tokenId, block.timestamp, msg.sender)));
+        uint256 rand = random(string(abi.encodePacked(tokenId, block.timestamp, block.coinbase, block.difficulty)));
         return rand % _maxIndex;
     }
     
