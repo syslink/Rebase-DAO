@@ -6,8 +6,18 @@ import {useTranslation} from 'react-i18next';
 
 const headerMenuConfig = [
   {
-    name: '',
+    name: '概览',
     path: '/dashboard',
+    icon: 'search',
+  },
+  {
+    name: '市场',
+    path: '/market',
+    icon: 'search',
+  },
+  {
+    name: '治理',
+    path: '/dao',
     icon: 'search',
   }
 ];

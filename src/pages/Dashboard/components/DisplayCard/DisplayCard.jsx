@@ -540,10 +540,10 @@ class BlockTxLayout extends Component {
                   const dateTime = new Date(parseInt(rightNFTInfo.endTime) * 1000).toLocaleString();
                   return (
                       <li>
-                        <div class={rightNFTInfo.type == 0 ? "gold-level" : (rightNFTInfo.type == 1 ? "silver-level" : "copper-level")}>
+                        {/* <div class={rightNFTInfo.type == 0 ? "gold-level" : (rightNFTInfo.type == 1 ? "silver-level" : "copper-level")}>
                           {rightNFTInfo.type == 0 ? "金质奖章" : (rightNFTInfo.type == 1 ? "银质奖章" : "铜质奖章")}
-                        </div>
-                        <img src={rightNFTInfo.tokenURI} width='100'/>
+                        </div> */}
+                        <img src={rightNFTInfo.tokenURI} width='120' height='150'/>
                         <h2>#{rightNFTInfo.tokenId}</h2>
                         <div class="date-div">生成HeroNFT截止时间: {dateTime}</div>
                         {
@@ -580,11 +580,26 @@ class BlockTxLayout extends Component {
                   //const roleLevel = 1;//await this.state.mysteryBox.methods.heroId2LevelMap(heroId).call();
                   return ( (heroId != null && heroId > 0) ?
                       <li>
-                        <img style={{marginTop: -10}} src={heroNftInfo.tokenURI} width='250'/>
+                        <div class="role-level">
+                          {heroId}
+                        </div>
+                        <img style={{marginTop: -10}} src={heroNftInfo.tokenURI} width='200'/>
                         
                         <h2 style={{marginTop: -10}}>#{heroNftId}</h2>    
-                        <h2 style={{marginTop: -10}}>{herosName[heroId]}</h2>  
-                        <h2 style={{marginTop: -10}}>排名:{heroId}</h2>                   
+                        <h2 style={{marginTop: -10, marginBottom: 20}}>{herosName[heroId]}</h2>   
+                        {
+                          heroNftInfo.isApproved ? 
+                            <div class="process-div" onClick={() => this.sale(heroNftInfo.tokenId)}>
+                              出售
+                            </div>
+                            :
+                            <div class="process-div" onClick={() => this.approveMarket(heroNftInfo.tokenId)}>
+                              授权出售
+                            </div>
+                        }   
+                        <div class="process-div" onClick={() => this.transferHeroNFT(heroNftInfo.tokenId)}>
+                          转让
+                        </div>           
                       </li>
                         :
                       <li>
@@ -631,7 +646,7 @@ class BlockTxLayout extends Component {
           </Dialog>
         <Dialog
           visible={this.state.issueRightNFTVisible}
-          title={<div className='dialogTitle'><img src={key} width={80}/> <span className='title-text'>授予荣誉奖章</span></div>}
+          title={<div className='dialogTitle'><img src={key} width={60}/> <span className='title-text'>授予荣誉奖章</span></div>}
           //footerActions="ok"
           footerAlign="center"
           closeable="true"
