@@ -36,6 +36,7 @@
     "ethers-multicall": "^0.1.6",
     "foundation-symbol": "^0.1.0",
     "graceful-fs": "^4.2.4",
+    "gulp": "^4.0.2",
     "history": "^4.7.2",
     "hoist-non-react-statics": "^2.5.5",
     "i18next": "^19.7.0",
