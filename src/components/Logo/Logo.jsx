@@ -20,7 +20,7 @@ export default class Logo extends PureComponent {
     return (
       <div className="logo">
         <Row align='center'>
-          <img style={{width: '24px', height: '24px', marginRight: '21px'}}  src={logo}/>
+          <img style={{width: '50px', height: '50px', marginRight: '21px'}}  src={logo}/>
           <Link to="/" className="logo-text" style={{color: '#eec710', fontSize: "16px"}}>
           Dapp-Learning DAO
           </Link>
