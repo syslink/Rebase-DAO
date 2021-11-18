@@ -14,15 +14,7 @@ export default class Logo extends PureComponent {
     };
   }
   componentDidMount = () => {
-    oexchain.oex.getChainConfig().then(chainConfig => {
-      let networkType = T('私网');
-      if (chainConfig.chainId == 1) {
-        networkType = T('主网');
-      } else if (chainConfig.chainId >= 100 && chainConfig.chainId <= 200) {
-        networkType = T('测试网');
-      }
-      this.setState({networkType});
-    })
+    
   }
   render() {
     return (
@@ -30,7 +22,7 @@ export default class Logo extends PureComponent {
         <Row align='center'>
           <img style={{width: '24px', height: '24px', marginRight: '21px'}}  src={logo}/>
           <Link to="/" className="logo-text" style={{color: '#eec710', fontSize: "16px"}}>
-          HD Wallet Market
+          Dapp-Learning DAO
           </Link>
         </Row>
       </div>

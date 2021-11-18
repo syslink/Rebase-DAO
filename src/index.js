@@ -22,8 +22,8 @@ import drizzleOptions from "./drizzleOptions";
 const drizzle = new Drizzle(drizzleOptions);
 console.log('drizzle', drizzle);
 
-if (window.ethereum && window.ethereum.networkVersion != '128') {
-  Feedback.toast.error("请将MetaMask连接到Heco网络，否则您无法正常使用本网站");
+if (window.ethereum && window.ethereum.networkVersion != '137') {
+  Feedback.toast.error("请将MetaMask连接到Polygon网络，否则您无法正常使用本网站");
 }
 
 const defaultLang = cookie.load('defaultLang');

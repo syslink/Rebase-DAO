@@ -147,8 +147,8 @@ class Header extends Component {
         try {
           // 请求用户授权
           await window.ethereum.enable();
-          if (window.ethereum.networkVersion != '128') {
-            Feedback.toast.error("请将MetaMask连接到Heco网络，否则您无法正常使用本网站");
+          if (window.ethereum.networkVersion != '137') {
+            Feedback.toast.error("请将MetaMask连接到Polygon网络，否则您无法正常使用本网站");
           } else {
             history.go(0);
           }
@@ -259,7 +259,7 @@ class Header extends Component {
           {
             this.props.drizzleState.accounts[0] ? <Row align='center'>
                                                     <div class="static-btn">
-                                                      Heco
+                                                      Polygon
                                                     </div>
                                                     <Balloon trigger={defaultTrigger} closable={false}>
                                                       {this.props.drizzleState.accounts[0]}

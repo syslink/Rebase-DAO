@@ -44,10 +44,16 @@ class BlockTxLayout extends Component {
       trade: props.drizzle.contracts.Trade,
       mysteryBox: props.drizzle.contracts.MysteryBox,
       usdt: props.drizzle.contracts.Usdt,
+      rightNFT: props.drizzle.contracts.RightNFT,
+      heroNFT: props.drizzle.contracts.HeroNFT,
       drizzleState: props.drizzle.store.getState(),
       accountName: props.drizzleState.accounts[0] != null ? props.drizzleState.accounts[0] : '0x0000000000000000000000000000000000000000',
       aNFTInfo: {totalSupply: 0, burnedAmount: 0, myAmount: 0, myTokenInfos: []},
       bNFTInfo: {totalSupply: 0, myAmount: 0, myTokenInfos: [], token2HeroId: {}},
+      
+      rightNFTInfo: {totalSupply: 0, tradeAmount: 0, myAmount: 0, myTokenInfos: [], isRightNFTMinter: false},
+      heroNFTInfo: {totalSupply: 0, tradeAmount: 0, myAmount: 0, myTokenInfos: [], token2HeroId: {}},
+      
       xTokenInfo: {totalSupply: 0, myPendingAmount: 0, liquidityAmount: 0, myAmount: 0, name: 'xToken', symbol: 'HDX', decimals: 18},
       buyANFTVisible: false,
       approvedUSDT: 0,
@@ -62,7 +68,8 @@ class BlockTxLayout extends Component {
       boughtANFTNumber: 1,
       curBNFTId: 0,
       boxOpeningVisible: false,
-      heroLevel: {}
+      heroLevel: {},
+      issueRightNFTVisible: false
     };
   }
   //发送交易：
@@ -72,58 +79,67 @@ class BlockTxLayout extends Component {
   //   this.props.drizzleState.transactions[txHash].status
   componentDidMount = () => {
     this.state.publicKey = EthCrypto.publicKeyByPrivateKey('0x7c0ec026d465f83aed3a05874ee0b95c731046303cc9abef32685b3dabe35db3');
-    this.updateANFTData();
-    this.updateBNFTData();
-    this.updateXTokenInfo();
+    this.updateRightNFTData();
+    this.updateHeroNFTData();
+    // this.updateXTokenInfo();
 
-    setInterval(() => {
-      this.updateXTokenInfo();
-    }, 3000);
+    // setInterval(() => {
+    //   this.updateXTokenInfo();
+    // }, 3000);
   }
 
-  updateANFTData = () => {
-    const {hdANFT, trade, deadAddr, accountName} = this.state;
-    const {aNFTInfo} = this.state;
-    hdANFT.methods.totalSupply().call().then(v => {
-      aNFTInfo.totalSupply = v;
-      this.setState({aNFTInfo});
+  updateRightNFTData = () => {
+    const {rightNFT, heroNFT, deadAddr, accountName} = this.state;
+    const {rightNFTInfo} = this.state;
+
+    rightNFT.methods.isMinter(accountName).call().then(v => {
+      rightNFTInfo.isRightNFTMinter = v;
+      this.setState({rightNFTInfo});
     });
-    hdANFT.methods.balanceOf(deadAddr).call().then(v => {
-      aNFTInfo.burnedAmount = v;
-      this.setState({aNFTInfo});
+
+    rightNFT.methods.totalSupply().call().then(v => {
+      rightNFTInfo.totalSupply = v;
+      this.setState({rightNFTInfo});
     });
-    hdANFT.methods.balanceOf(accountName).call().then(async (v) => {
-      aNFTInfo.myAmount = v;
-      aNFTInfo.myTokenInfos = [];
+    rightNFT.methods.balanceOf(deadAddr).call().then(v => {
+      rightNFTInfo.burnedAmount = v;
+      this.setState({rightNFTInfo});
+    });
+    rightNFT.methods.balanceOf(accountName).call().then(async (v) => {
+      rightNFTInfo.myAmount = v;
+      rightNFTInfo.myTokenInfos = [];
       for (var i = 0; i < v; i++) {
-        const tokenId = await hdANFT.methods.tokenOfOwnerByIndex(accountName, i).call();
-        const tokenInfo = await trade.methods.userXTokenList(tokenId - 1).call();
-        aNFTInfo.myTokenInfos.push(tokenInfo);
+        const tokenId = await rightNFT.methods.tokenOfOwnerByIndex(accountName, i).call();
+        const tokenURI = await rightNFT.methods.tokenURI(tokenId).call();
+        const metaInfo = await rightNFT.methods.getRightInfo(tokenId).call();
+        const isApproved = await rightNFT.methods.isApprovedForAll(accountName, heroNFT.address).call();
+
+        const tokenInfo = {tokenId, tokenURI, isApproved, type: metaInfo.rightType, desc: metaInfo.desc, endTime: metaInfo.endTime};
+        rightNFTInfo.myTokenInfos.push(tokenInfo);
       }
-      this.setState({aNFTInfo});
+      this.setState({rightNFTInfo});
     });
   }
 
-  updateBNFTData = () => {
-    const {hdBNFT, mysteryBox, accountName} = this.state;
-    const {bNFTInfo} = this.state;
+  updateHeroNFTData = () => {
+    const {heroNFT, mysteryBox, accountName} = this.state;
+    const {heroNFTInfo} = this.state;
 
-    hdBNFT.methods.totalSupply().call().then(v => {
-      bNFTInfo.totalSupply = v;
-      this.setState({bNFTInfo});
+    heroNFT.methods.totalSupply().call().then(v => {
+      heroNFTInfo.totalSupply = v;
+      this.setState({heroNFTInfo});
     });
-    hdBNFT.methods.balanceOf(accountName).call().then(async (v) => {
-      bNFTInfo.myAmount = v;
-      bNFTInfo.myTokenInfos = [];
+    heroNFT.methods.balanceOf(accountName).call().then(async (v) => {
+      heroNFTInfo.myAmount = v;
+      heroNFTInfo.myTokenInfos = [];
       for (var i = 0; i < v; i++) {
-        const tokenId = await hdBNFT.methods.tokenOfOwnerByIndex(accountName, i).call();
-        const heroId = await hdBNFT.methods.nft2HeroIdMap(tokenId).call();
-        const roleLevel = await mysteryBox.methods.heroId2LevelMap(heroId).call();
-        bNFTInfo.myTokenInfos.push(tokenId);
-        bNFTInfo.token2HeroId[tokenId] = heroId;
-        this.state.heroLevel[heroId] = roleLevel;
+        const tokenId = await heroNFT.methods.tokenOfOwnerByIndex(accountName, i).call();
+        const heroId = await heroNFT.methods.tokenId2HeroIdMap(tokenId).call();
+        const tokenURI = await heroNFT.methods.tokenURI(tokenId).call();
+        heroNFTInfo.myTokenInfos.push({tokenId, heroId, tokenURI});
+        heroNFTInfo.token2HeroId[tokenId] = heroId;
       };
-      this.setState({bNFTInfo});
+      this.setState({heroNFTInfo});
     });
   }
 
@@ -196,23 +212,6 @@ class BlockTxLayout extends Component {
     }
   };
 
-  buyANFT = () => {
-    const {trade, accountName, xTokenInfo} = this.state;
-    if (utils.isEmptyObj(this.state.boughtANFTNumber)) {
-      Feedback.toast.error(T('请输入购买数量'));
-      return;
-    }
-    const aNFTNumber = parseInt(this.state.boughtANFTNumber);
-    if (aNFTNumber < 1) {
-      Feedback.toast.error(T('购买数量不可小于1'));
-      return;
-    }
-    this.state.curStakeId = trade.methods["buyANFT"].cacheSend(aNFTNumber, {from: accountName});
-    this.syncTxStatus(() => {
-      this.updateXTokenInfo();
-      this.updateANFTData();
-    }, () => {})
-  }
 
   openBuyANFTDialog = () => {
     const {trade, usdt, accountName} = this.state;
@@ -221,35 +220,63 @@ class BlockTxLayout extends Component {
     });
   }
 
-  swap2HDWallet = (aNFTId) => {
-    const {trade, hdANFT} = this.state;
-    this.state.curANFTId = aNFTId;
-    hdANFT.methods.getApproved(aNFTId).call().then(v => {
-      this.setState({approvedANFT: trade.address == v, swapANFT2HDWalletVisible: true});
-    });
+  openIssueRightNFTDialog = () => {
+    this.setState({issueRightNFTVisible: true});
   }
 
-  withdrawXToken = () => {
-    const {trade, xToken, accountName, xTokenInfo} = this.state;
-    this.state.curStakeId = trade.methods["withdrawXToken"].cacheSend({from: accountName});
+  issueRightNFT = () => {
+    const {rightNFT, accountName} = this.state;
+    const endTime = Math.floor(new Date().getTime() / 1000) + 30 * 24 * 3600;
+    this.state.curStakeId = rightNFT.methods["mint"].cacheSend(this.state.reward2Account,
+                                                               parseInt(this.state.rewardType),
+                                                               this.state.rewardDesc,
+                                                               "0x" + new BigNumber(endTime).toString(16),
+                                                               {from: accountName});
     this.syncTxStatus(() => {
-      xToken.methods.balanceOf(accountName).call().then(v => {
-        xTokenInfo.myAmount = v;
-        this.setState({xTokenInfo});
-      });
-      trade.methods.pendingXToken().call().then(v => {
-        xTokenInfo.myPendingAmount = v;
-        this.setState({xTokenInfo});
-      });
-    }, () => {})
+      this.updateRightNFTData();
+      this.setState({ issueRightNFTVisible: false });
+    }, () => {});
+  }
+
+  approveHeroNFT = (rightNFTId) => {
+    const {rightNFT, heroNFT, accountName} = this.state;
+    this.state.curRightNFTId = rightNFTId;
+    this.state.curStakeId = rightNFT.methods["setApprovalForAll"].cacheSend(heroNFT.address,
+                                                                            true,
+                                                                            {from: accountName});
+    this.syncTxStatus(() => {
+      this.updateRightNFTData();
+    }, () => {});
+  }
+
+  generateHeroNFT = (rightNFTId) => {
+    const {rightNFT, heroNFT, accountName} = this.state;
+    this.state.curRightNFTId = rightNFTId;
+    this.state.curStakeId = heroNFT.methods["mint"].cacheSend(rightNFTId, {from: accountName});
+    this.setState({boxOpeningVisible: true});
+    this.syncTxStatus(() => {
+      this.setState({boxOpeningVisible: false});
+      this.updateRightNFTData();
+      this.updateHeroNFTData();
+    }, () => {
+      this.setState({boxOpeningVisible: false});
+    });
   }
 
   handleANFTNumberChange = (v) => {
     this.state.boughtANFTNumber = v;
   }
 
-  handleUserNameChange = (v) => {
-    this.state.userName = v;
+  handleUserAccountChange = (v) => {
+    this.state.reward2Account = v;
+  }
+
+  handleRewardDescChange = (v) => {
+    this.state.rewardDesc = v;
+  }
+
+  handleRewardTypeChange = (v) => {
+    this.state.rewardType = v;
   }
 
   handleAddressChange = (v) => {
@@ -384,7 +411,7 @@ class BlockTxLayout extends Component {
                   <Row align='center' style={styles.titleRow}>
                     <img src={block} width='24'/>
                     <div style={styles.title}>
-                      {T('aNFT')}
+                      {T('RightNFT')}
                     </div>
                   </Row>
                 </Col>
@@ -392,7 +419,7 @@ class BlockTxLayout extends Component {
                   <Row align='center' style={styles.titleRow}>
                     <img src={block} width='24'/>
                     <div style={styles.title}>
-                      {T('bNFT')}
+                      {T('HeroNFT')}
                     </div>
                   </Row>
                 </Col>
@@ -400,7 +427,7 @@ class BlockTxLayout extends Component {
                   <Row align='center' style={styles.titleRow}>
                     <img src={tx} width='24'/>
                     <div style={styles.title}>
-                      {T('xToken')}
+                      {T('Governance')}
                     </div>
                   </Row>
                 </Col>
@@ -411,16 +438,15 @@ class BlockTxLayout extends Component {
                   {T('总产出量')}
                   </div>
                   <div className="count" style={styles.count}>
-                    {this.state.aNFTInfo.totalSupply}
+                    {this.state.rightNFTInfo.totalSupply}
                     
                   </div>
                   
                   <div style={styles.smallCountTitle}>
-                  {T('总兑换量')}
+                  {T('总交易量')}
                   </div>
-
                   <div className="count" style={styles.smallCount}>
-                    {this.state.aNFTInfo.burnedAmount}
+                    {this.state.rightNFTInfo.tradeAmount}
                   </div>
 
                   <div style={styles.countTitle}>
@@ -428,7 +454,7 @@ class BlockTxLayout extends Component {
                   </div>
                   <div className="count" style={styles.count}>
                     {/* {parseInt(this.state.robotNFT.methods["tokenCount"].cacheCall(), 16)} */}
-                    {this.state.aNFTInfo.myAmount}
+                    {this.state.rightNFTInfo.myAmount}
                   </div>
                 </Col>
                 <Col span="4" style={styles.item}>
@@ -437,7 +463,14 @@ class BlockTxLayout extends Component {
                   {T('总产出量')}
                   </div>
                   <div className="count" style={styles.count}>
-                    {this.state.bNFTInfo.totalSupply}
+                    {this.state.heroNFTInfo.totalSupply}
+                  </div>
+                  
+                  <div style={styles.smallCountTitle}>
+                  {T('总交易量')}
+                  </div>
+                  <div className="count" style={styles.smallCount}>
+                    {this.state.heroNFTInfo.tradeAmount}
                   </div>
                   
                   <div style={styles.smallCountTitle}>
@@ -445,15 +478,15 @@ class BlockTxLayout extends Component {
                   </div>
 
                   <div className="count" style={styles.smallCount}>
-                   {this.state.bNFTInfo.myAmount}
+                   {this.state.heroNFTInfo.myAmount}
                   </div>
                 </Col>
                 <Col span="4" style={styles.item}>
                   <div style={styles.countTitle}>
-                  {T('已挖出总量')}
+                  {T('提案总数')}
                   </div>
                   <div className="count" style={styles.count}>
-                    {this.displayReadableAmount(this.state.xTokenInfo.totalSupply)} {this.state.xTokenInfo.symbol}
+                    {0}
                   </div>
                   
                   {/* <div style={styles.smallCountTitle}>
@@ -465,22 +498,18 @@ class BlockTxLayout extends Component {
                   </div> */}
 
                   <div style={styles.countTitle}>
-                  {T('我的余额')}
+                  {T('已结案数')}
                   </div>
                   <div className="count" style={styles.count}>
-                   {this.displayReadableAmount(this.state.xTokenInfo.myAmount)} {this.state.xTokenInfo.symbol}
+                   {0}
                   </div>
                   
                   <div style={styles.smallCountTitle}>
-                  {T('我的可提取量')}
+                  {T('未结案数')}
                   </div>
 
                   <div className="count" style={styles.smallCount}>
-                    {this.displayReadableAmount(this.state.xTokenInfo.myPendingAmount, 2)} {this.state.xTokenInfo.symbol}
-
-                    <div class="common-btn" onClick={() => this.withdrawXToken()}>
-                      提取
-                    </div>
+                    {0}
                   </div>
 
                 </Col>
@@ -490,26 +519,44 @@ class BlockTxLayout extends Component {
         </div>
         <div className='block-container'>
             <div className='nft-title'> 
-              <img src={block} width='24'/>
-              <b style={{fontSize: 20}}>{T('您的aNFT')}</b>
-              <div class="common-btn" onClick={() => this.openBuyANFTDialog()} title="10U/aNFT">
-                购买
+              <div>
+                <img src={block} width='24'/>
+                <b style={{fontSize: 20}}>{T('您的RightNFT')}</b>
               </div>
+              {
+                this.state.rightNFTInfo.isRightNFTMinter ? 
+                  <div class="common-btn" onClick={() => this.openIssueRightNFTDialog()}>
+                    授予奖章
+                  </div>
+                  :
+                  ""
+              }
+              
             </div>
             <div className='nft-list'>
               <ul>
               {
-                this.state.aNFTInfo.myTokenInfos.map(tokenInfo => {
+                this.state.rightNFTInfo.myTokenInfos.map(rightNFTInfo => {
+                  const dateTime = new Date(parseInt(rightNFTInfo.endTime) * 1000).toLocaleString();
                   return (
                       <li>
-                        <img src={key} width='80'/>
-                        <h2>ID: {tokenInfo.aNFTId}</h2>
-                        <div class="info-div">
-                          <p>购买时区块高度:{tokenInfo.startBlockNum}</p>
+                        <div class={rightNFTInfo.type == 0 ? "gold-level" : (rightNFTInfo.type == 1 ? "silver-level" : "copper-level")}>
+                          {rightNFTInfo.type == 0 ? "金质奖章" : (rightNFTInfo.type == 1 ? "银质奖章" : "铜质奖章")}
                         </div>
-                        <div class="process-div" onClick={() => this.swap2HDWallet(tokenInfo.aNFTId)}>
-                        兑换
-                        </div>
+                        <img src={rightNFTInfo.tokenURI} width='100'/>
+                        <h2>#{rightNFTInfo.tokenId}</h2>
+                        <div class="date-div">生成HeroNFT截止时间: {dateTime}</div>
+                        {
+                          rightNFTInfo.isApproved ? 
+                            <div class="process-div" onClick={() => this.generateHeroNFT(rightNFTInfo.tokenId)}>
+                              生成HeroNFT
+                            </div>
+                            :
+                            <div class="process-div" onClick={() => this.approveHeroNFT(rightNFTInfo.tokenId)}>
+                              授权生成HeroNFT
+                            </div>
+                        }
+                        
                       </li>)
                 })
               }
@@ -519,31 +566,30 @@ class BlockTxLayout extends Component {
 
         <div className='block-container'>
             <div className='nft-title'> 
-              <img src={block} width='24'/>
-              <b style={{fontSize: 20}}>{T('您的bNFT')}</b>
-              <div width='60'/>
+              <div>
+                <img src={block} width='24'/>
+                <b style={{fontSize: 20}}>{T('您的HeroNFT')}</b>
+              </div>
             </div>
             <div className='nft-list'>
               <ul>
               {
-                this.state.bNFTInfo.myTokenInfos.map((bNftId) => {
-                  // const bNftId = tokenInfo.tokenId;
-                  const heroId = this.state.bNFTInfo.token2HeroId[bNftId];
+                this.state.heroNFTInfo.myTokenInfos.map((heroNftInfo) => {
+                  const heroNftId = heroNftInfo.tokenId;
+                  const heroId = heroNftInfo.heroId;
                   //const roleLevel = 1;//await this.state.mysteryBox.methods.heroId2LevelMap(heroId).call();
                   return ( (heroId != null && heroId > 0) ?
                       <li>
-                        <div class="role-level">
-                          {this.state.heroLevel[heroId]}级
-                        </div>
-                        <img style={{marginTop: -10}} src={'https://doulaig.oss-cn-hangzhou.aliyuncs.com/heros/' + heroId + '.png'} width='250'/>
+                        <img style={{marginTop: -10}} src={heroNftInfo.tokenURI} width='250'/>
                         
-                        <h2 style={{marginTop: -25}}>ID: {bNftId}</h2>    
-                        <h2 style={{marginTop: -10}}>{herosName[heroId]}</h2>                  
+                        <h2 style={{marginTop: -10}}>#{heroNftId}</h2>    
+                        <h2 style={{marginTop: -10}}>{herosName[heroId]}</h2>  
+                        <h2 style={{marginTop: -10}}>排名:{heroId}</h2>                   
                       </li>
                         :
                       <li>
-                        <img src={box} width='180' title='点击开宝盒' onClick={() => this.openBox(bNftId)}/>
-                        <h2 style={{marginTop: -20}}>ID: {bNftId}</h2>                      
+                        <img src={box} width='180' title='点击开宝盒' onClick={() => this.openBox(heroNftId)}/>
+                        <h2 style={{marginTop: -20}}>#{heroNftId}</h2>                      
                       </li>
                       )
                 })
@@ -584,47 +630,38 @@ class BlockTxLayout extends Component {
             />
           </Dialog>
         <Dialog
-          visible={this.state.swapANFT2HDWalletVisible}
-          title={<div className='dialogTitle'><img src={key} width={80}/> <span className='title-text'>将aNFT兑换为硬件钱包</span></div>}
+          visible={this.state.issueRightNFTVisible}
+          title={<div className='dialogTitle'><img src={key} width={80}/> <span className='title-text'>授予荣誉奖章</span></div>}
           //footerActions="ok"
           footerAlign="center"
           closeable="true"
-          onOk={this.onSwapANFTOK.bind(this)}
-          onCancel={() => this.setState({ swapANFT2HDWalletVisible: false })}
-          onClose={() => this.setState({ swapANFT2HDWalletVisible: false })}
+          onOk={this.issueRightNFT.bind(this)}
+          onCancel={() => this.setState({ issueRightNFTVisible: false })}
+          onClose={() => this.setState({ issueRightNFTVisible: false })}
           className='dialogs'
-          footer={<div className='dialog-footer'>
-                    {
-                      !this.state.approvedANFT ? <div class="dialog-btn" onClick={() => this.approveANFT()}>
-                                                      {this.state.approveANFTTip}
-                                                    </div> 
-                                                      : 
-                                                    <div class="dialog-btn" onClick={() => this.swapANFT2HDWallet()}>
-                                                      提交
-                                                    </div>
-                    }
-                  </div>}
         >
           <Input hasClear
-            onChange={this.handleUserNameChange.bind(this)}
+            onChange={this.handleUserAccountChange.bind(this)}
             className='node-input'
-            addonBefore="收件人:"
+            addonBefore="被授予人地址:"
+            size="medium"
+            maxLength={42}
+            showLimitHint
+          />
+          <Input hasClear
+            onChange={this.handleRewardTypeChange.bind(this)}
+            className='node-input'
+            addonBefore="奖章类型:"
+            placeholder="0:金牌奖章，1:银牌奖章，2:铜牌奖章"
             size="medium"
             maxLength={10}
             showLimitHint
           />
           <Input hasClear
-            onChange={this.handleAddressChange.bind(this)}
+            onChange={this.handleRewardDescChange.bind(this)}
             className='node-input'
-            addonBefore="地  址:"
-            size="medium"
-            maxLength={10}
-            showLimitHint
-          />
-          <Input hasClear
-            onChange={this.handleContactChange.bind(this)}
-            className='node-input'
-            addonBefore="手机号:"
+            addonBefore="授予原因:"
+            placeholder="如提交多少PR，做过几次分享等等"
             size="medium"
             maxLength={10}
             showLimitHint
