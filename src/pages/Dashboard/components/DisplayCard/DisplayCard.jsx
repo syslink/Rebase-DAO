@@ -38,23 +38,14 @@ class BlockTxLayout extends Component {
     this.state = {
       deadAddr: '0x000000000000000000000000000000000000dEaD',
       publicKey: '',
-      hdANFT: props.drizzle.contracts.HDANFT,
-      hdBNFT: props.drizzle.contracts.HDBNFT,
-      xToken: props.drizzle.contracts.XToken,
       trade: props.drizzle.contracts.Trade,
-      mysteryBox: props.drizzle.contracts.MysteryBox,
       usdt: props.drizzle.contracts.Usdt,
       rightNFT: props.drizzle.contracts.RightNFT,
       heroNFT: props.drizzle.contracts.HeroNFT,
       drizzleState: props.drizzle.store.getState(),
       accountName: props.drizzleState.accounts[0] != null ? props.drizzleState.accounts[0] : '0x0000000000000000000000000000000000000000',
-      aNFTInfo: {totalSupply: 0, burnedAmount: 0, myAmount: 0, myTokenInfos: []},
-      bNFTInfo: {totalSupply: 0, myAmount: 0, myTokenInfos: [], token2HeroId: {}},
-      
       rightNFTInfo: {totalSupply: 0, tradeAmount: 0, myAmount: 0, myTokenInfos: [], isRightNFTMinter: false},
       heroNFTInfo: {totalSupply: 0, tradeAmount: 0, myAmount: 0, myTokenInfos: [], token2HeroId: {}},
-      
-      xTokenInfo: {totalSupply: 0, myPendingAmount: 0, liquidityAmount: 0, myAmount: 0, name: 'xToken', symbol: 'HDX', decimals: 18},
       buyANFTVisible: false,
       approvedUSDT: 0,
       approveTip: '授权USDT',
@@ -81,11 +72,6 @@ class BlockTxLayout extends Component {
     this.state.publicKey = EthCrypto.publicKeyByPrivateKey('0x7c0ec026d465f83aed3a05874ee0b95c731046303cc9abef32685b3dabe35db3');
     this.updateRightNFTData();
     this.updateHeroNFTData();
-    // this.updateXTokenInfo();
-
-    // setInterval(() => {
-    //   this.updateXTokenInfo();
-    // }, 3000);
   }
 
   updateRightNFTData = () => {
@@ -143,43 +129,6 @@ class BlockTxLayout extends Component {
     });
   }
 
-  updateXTokenInfo = () => {
-    const {xToken, accountName} = this.state;
-    const {trade, xTokenInfo} = this.state;
-
-    xToken.methods.totalSupply().call().then(v => {
-      xTokenInfo.totalSupply = v;
-      this.setState({xTokenInfo});
-    });
-    xToken.methods.name().call().then(v => {
-      xTokenInfo.name = v;
-      this.setState({xTokenInfo});
-    });
-    xToken.methods.symbol().call().then(v => {
-      xTokenInfo.symbol = v;
-      this.setState({xTokenInfo});
-    });
-    xToken.methods.balanceOf(trade.address).call().then(v => {
-      xTokenInfo.liquidityAmount = v;
-      this.setState({xTokenInfo});
-    });
-    trade.methods.pendingXToken().call().then(v => {
-      xTokenInfo.myPendingAmount = v;
-      this.setState({xTokenInfo});
-    });
-    return xToken.methods.balanceOf(accountName).call().then(v => {
-      xTokenInfo.myAmount = v;
-      this.setState({xTokenInfo});
-      return v;
-    });
-  }
-
-  getMyXTokenNumber = () => {
-    const {xToken, accountName} = this.state;
-
-    return xToken.methods.balanceOf(accountName).call();
-  }
-
   submitSwapReq = () => {
     const {trade, accountName, curANFTId} = this.state;
     try {
@@ -211,14 +160,6 @@ class BlockTxLayout extends Component {
       Feedback.toast.error(error.message || error);
     }
   };
-
-
-  openBuyANFTDialog = () => {
-    const {trade, usdt, accountName} = this.state;
-    usdt.methods.allowance(accountName, trade.address).call().then(v => {
-      this.setState({approvedUSDT: v, buyANFTVisible: true});
-    });
-  }
 
   openIssueRightNFTDialog = () => {
     this.setState({issueRightNFTVisible: true});
@@ -287,14 +228,6 @@ class BlockTxLayout extends Component {
     this.state.contactInfo = v;
   }
 
-  onBuyANFTOK = () => {
-    this.setState({buyANFTVisible: false});
-  }
-
-  onSwapANFTOK = () => {
-    this.setState({swapANFT2HDWalletVisible: false});
-  }
-
   approveUSDT = () => {
     const {trade, usdt, accountName, approveTip, approvingTip} = this.state;
     if (approveTip == approvingTip) return;
@@ -309,44 +242,6 @@ class BlockTxLayout extends Component {
       });
     }, () => { 
       this.setState({approveTip}); 
-    });
-  }
-
-  approveANFT = () => {
-    const {trade, hdANFT, accountName, approveANFTTip, approvingTip, curANFTId} = this.state;
-    if (approveANFTTip == approvingTip) return;
-
-    const curStakeId = hdANFT.methods["approve"].cacheSend(trade.address, 
-                                                           curANFTId, 
-                                                           {from: accountName});
-    this.setState({approveANFTTip: approvingTip, curStakeId});
-    this.syncTxStatus(() => {
-      this.setState({approvedANFT: true, approveANFTTip});
-    }, () => { 
-      this.setState({approveANFTTip}); 
-    })
-  }
-
-  openBox = (bNFTId) => {
-    const { accountName, hdBNFT, mysteryBox } = this.state;
-    hdBNFT.methods.nft2HeroIdMap(bNFTId).call().then(heroId => {
-      if (heroId > 0) {
-        Feedback.toast.error('宝盒已开启');
-      } else {
-        const curStakeId = mysteryBox.methods["openBox"].cacheSend(bNFTId, 
-                                                                  {from: accountName});
-        
-        this.setState({curStakeId, boxOpeningVisible: true});
-        this.syncTxStatus(() => {
-        hdBNFT.methods.nft2HeroIdMap(bNFTId).call().then(v => {
-          this.updateBNFTData();
-          this.setState({boxOpeningVisible: false});
-        });
-        }, () => { 
-          Feedback.toast.error('宝盒开启失败');
-          this.setState({boxOpeningVisible: false});
-        })
-      }
     });
   }
 
@@ -618,7 +513,7 @@ class BlockTxLayout extends Component {
             //footerActions="ok"
             footerAlign="center"
             closeable="true"
-            onOk={this.onBuyANFTOK.bind(this)}
+            //onOk={this.onBuyANFTOK.bind(this)}
             onCancel={() => this.setState({ buyANFTVisible: false })}
             onClose={() => this.setState({ buyANFTVisible: false })}
             className='dialogs'

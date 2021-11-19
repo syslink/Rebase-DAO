@@ -22,9 +22,9 @@ import drizzleOptions from "./drizzleOptions";
 const drizzle = new Drizzle(drizzleOptions);
 console.log('drizzle', drizzle);
 
-// if (window.ethereum && window.ethereum.networkVersion != '137') {
-//   Feedback.toast.error("请将MetaMask连接到Polygon网络，否则您无法正常使用本网站");
-// }
+if (window.ethereum && window.ethereum.networkVersion != '137') {
+  Feedback.toast.error("请将MetaMask连接到Polygon网络，否则您无法正常使用本网站");
+}
 
 const defaultLang = cookie.load('defaultLang');
 if (defaultLang != null) {
@@ -37,9 +37,6 @@ const history = createHashHistory();
 const store = configureStore(initialState, history);
 const ICE_CONTAINER = document.getElementById('ice-container');
 
-if (!window.localStorage) {
-  Feedback.toast.warn(T('请升级浏览器，当前浏览器无法保存交易结果'));
-}
 if (!ICE_CONTAINER) {
   throw new Error('当前页面不存在 <div id="ice-container"></div> 节点.');
 }
